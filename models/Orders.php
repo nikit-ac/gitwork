@@ -52,4 +52,18 @@ class Orders extends \yii\db\ActiveRecord
             'time_total' => 'Время работы',
         ];
     }
+
+    /*
+     * Get order, which now in work
+     * return model or NULL
+     */
+    public static function getActive()
+    {
+        return self::find()->where(['active' => 1])->one();
+    }
+
+    public static function setNewTime()
+    {
+        
+    }
 }

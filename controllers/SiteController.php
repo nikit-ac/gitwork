@@ -9,6 +9,7 @@ use yii\filters\VerbFilter;
 use app\models\LoginForm;
 use app\models\ContactForm;
 use app\models\Orders;
+use app\models\User;
 use yii\data\ActiveDataProvider;
 use DateTime;
 
@@ -54,30 +55,28 @@ class SiteController extends Controller
 
     public function actionIndex()
     {
-        $dataProvider = new ActiveDataProvider([
-                    'query' => Orders::find(),
-                ]);
 
-                return $this->render('index', [
-                    'dataProvider' => $dataProvider,
-                ]);
+        $dataProvider = new ActiveDataProvider([
+            'query' => Orders::find(),
+        ]);
+        $activeOrder = Orders::getActive()->work_dir;
+
+        return $this->render('index', [
+            'dataProvider' => $dataProvider,
+            'activeOrder' => $activeOrder
+        ]);
     }
 
-
-    public function actionAddnew()
-    {
-        $orderNow = orders::find()->where(['active' => 1])->one();
-        if ($orderNow == null) {
+    public function actionAdd()
+    {   
+        if (!Orders::getActive()) {
             $post_order = Yii::$app->request->post()['Orders'];
             $order = new Orders($post_order);
             $order->time_begin = date("Y-m-d H:i:s");
             $order->active = 1;
             $order->save();
-            $resultAdd = 3;
-        } else{
-            $resultAdd = 2;
         }
-        Yii::$app->response->redirect(array('site/index', 'resultAdd' => $resultAdd));
+        Yii::$app->response->redirect(array('site/index'));
     }
 
     public function actionEdit($id)
@@ -89,25 +88,26 @@ class SiteController extends Controller
             $orderWork->time_begin = date("Y-m-d H:i:s");
             $orderWork->save();
             $resultAdd = 1;
-        } else{
+        } else {
             $resultAdd = 2;
         }
-     //  return $this->renderAjax('site/index', 'resultAdd' => $resultAdd);
-       Yii::$app->response->redirect(array('site/index', 'resultAdd' => $resultAdd));
+        //  return $this->renderAjax('site/index', 'resultAdd' => $resultAdd);
+        Yii::$app->response->redirect(array('site/index', 'resultAdd' => $resultAdd));
     }
 
     public function actionStop()
     {
-        $orderNow    = orders::find()->where(['active' => 1])->one();
-        $timeOld     = $orderNow->time_total;
-        $timeBegin   = new DateTime($orderNow->time_begin);
-        $timeEnd     = new DateTime(date("Y-m-d H:i:s"));
-        $orderNow->active = 0;
-        $timeWork    = $timeBegin->diff($timeEnd);
-        $MinutesWork = $timeWork->i + $timeWork->h*60 + $timeWork->d*60*24 + $timeOld;
-        $orderNow->time_total = $MinutesWork;
-        $orderNow->save();
-        Yii::$app->response->redirect(array('site/index'));
+        $activeOrder = Orders::getActive();
+        $timeOld = $activeOrder->time_total;
+        $timeBegin = new DateTime($activeOrder->time_begin);
+        $timeEnd = new DateTime(date("Y-m-d H:i:s"));
+        $activeOrder->active = 0;
+        $timeWork = $timeBegin->diff($timeEnd);
+        $minutesWork = $timeWork->i + $timeWork->h * 60 + $timeWork->d * 60 * 24 + $timeOld;
+        $activeOrder->time_total = $minutesWork;
+        $activeOrder->save();
+        return $this->render('index');
+//        Yii::$app->response->redirect(array('site/index'));
     }
 
     public function actionLogin()
@@ -116,7 +116,7 @@ class SiteController extends Controller
             return $this->goHome();
         }
 
-        $model = new LoginForm();
+        $model = new User();
         if ($model->load(Yii::$app->request->post()) && $model->login()) {
             return $this->goBack();
         }
